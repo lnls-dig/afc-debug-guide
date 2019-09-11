@@ -1,0 +1,377 @@
+%++++++++++++++++++++++++++++++++++++++++
+\documentclass[letterpaper,12pt, titlepage]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{tabularx} % extra features for tabular environment
+\usepackage{amsmath}  % improve math presentation
+\usepackage{graphicx} % takes care of graphic including machinery
+\usepackage[margin=1in,letterpaper]{geometry} % decreases margins
+\usepackage{cite} % takes care of citations
+\usepackage{listings}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{url}
+\usepackage[final]{hyperref} % adds hyper links inside the generated pdf file
+\hypersetup{
+  colorlinks=true,       % false: boxed links; true: colored links
+  linkcolor=blue,        % color of internal links
+  citecolor=blue,        % color of links to bibliography
+  filecolor=magenta,     % color of file links
+  urlcolor=blue
+}
+
+\lstset{
+  numbers=none,
+  tabsize=4,
+  breaklines=true,
+  basicstyle=\small\ttfamily,
+  framerule=0pt,
+  columns=fullflexible
+}
+
+\newcommand{\newparagraph}[1]{\paragraph{#1}\mbox{}\\}
+
+%++++++++++++++++++++++++++++++++++++++
+\begin{document}
+
+% Title
+\title{\bfseries \huge AFC Debug Guide}
+\author{Henrique A. Silva}
+\date{\today}
+\maketitle
+
+% Table of contents
+\tableofcontents
+\newpage
+
+\section{Assembly guide}
+
+\section{Normal status and operation}
+
+\section{Known hardware problems}
+
+\section{MMC Programming Guide}
+
+\subsection{Compiling openMMC}
+openMMC \cite{openmmc-github} uses the CMake build system to ease the compilation of its modules and perform the cross-compiling for multiple hardware targets.
+The compilation \textbf{MUST} be performed out-of-source, that is, in a separate folder from the source code.
+
+There are a few flags that can be passed to CMake in order to customize the build, shown in Table \ref{tbl:cmake-flags}. The only mandatory flag is \texttt{-DBOARD}, the others are optional (depending on the port some may become mandatory, for example, if the board has more than one version then the flag \texttt{-DVERSION} must be specified).
+
+\begin{table}[ht]
+  \begin{center}
+    \caption{Common CMake Flags}
+    \label{tbl:cmake-flags} % spaces are big no-no withing labels
+    \begin{tabular}{|c|c|l|}
+      \hline
+      \textbf{Flag} & \textbf{Description} & \textbf{Values}\\
+      \hline
+      -DBOARD & Target board name & \makecell[l]{afc-bpm\\afc-timing}\\
+      \hline
+      -DVERSION & Target board version & \makecell[l]{3.0 (only afc-bpm)\\3.1}\\
+      \hline
+      -DBOARD\_RTM & Target RTM board name & rtm-8sfp\\
+      \hline
+      -DCMAKE\_BUILD\_TYPE & Type of build & \makecell[l]{Debug\\Release}\\
+      \hline
+      -DBENCH\_TEST & \makecell{Bypass \#ENABLE signal and enable\\Payload Power at startup} & \makecell[l]{True\\False}\\
+      \hline
+      -DFRU\_WRITE\_EEPROM & \makecell{Write a runtime built FRU image\\ to the EEPROM at startup} & \makecell[l]{True\\False}\\
+      \hline
+      -DDEBUG\_PROBE & \makecell{Select which debug probe will be \\ used to program the MMC} & \makecell[l]{LPCLink\\LPCLink2}\\
+      \hline
+    \end{tabular}
+  \end{center}
+\end{table}
+
+In order to compile the firmware, the user must first run CMake in a separate folder and then run \texttt{make} to effectively compile it and generate the final binaries.
+
+Example for afc-bpm:
+\begin{lstlisting}[language=bash]
+  cd openMMC/
+  mkdir <build_dir>
+  cd <build_dir>
+  cmake ../ -DBOARD=afc-bpm -DVERSION=3.1
+  make
+\end{lstlisting}
+
+Example for afc-timing:
+\begin{lstlisting}[language=bash]
+  cd openMMC/
+  mkdir <build_dir>
+  cd <build_dir>
+  cmake ../ -DBOARD=afc-timing -DBOARD_RTM=rtm-8sfp
+  make
+\end{lstlisting}
+
+After a successful run, \texttt{make} will generate the binaries in the folder \texttt{<build\_dir>/out}. There will be 4 files in the folder:
+\begin{itemize}
+  \setlength\itemsep{0em}
+\item\texttt{openMMC.axf}: openMMC object file embedded with debug information (ARM-generated)
+\item\texttt{openMMC.bin}: openMMC application binary file
+\item\texttt{bootloader.axf}: Bootloader object file embedded with debug information
+\item\texttt{bootloader.bin}: Simple bootloader binary
+\end{itemize}
+
+\subsubsection{Common Compilation Errors}
+
+\newparagraph{CMake: The source directory "dir" does not appear to contain CMakeLists.txt}
+This error occurs when CMake can't find the CMakeLists.txt base file (located on openMMC root dir). Check the path given on the CMake command as argument and try again
+
+\newparagraph{CMake: In Source Build}
+If CMake is run on the root directory of the project, it will throw an error and display a message indicating that this is forbidden. Since CMake creates some base files and folders when run, it will complain about it the next time it's run (even if in a different folder).
+
+To solve this, just erase the \texttt{CMakeCache.txt} file and \texttt{CMakeFiles} folder from the project root directory. Alternatively, run \texttt{git clean -fdX} if this is a clean copy of the repository (note that this command will erase any files that don't match the ones present in the remote repository).
+
+\newparagraph{CMake: Selected [RTM] board <name> is not implemented!}
+As the error message says, the given board name on the CMake command does not match any port folder found at \texttt{openMMC/port/board}. Check the command and try again.
+
+\newparagraph{make: out/openMMC.axf section `.text' will not fit in region `MFlash128' \\ make: region `MFlash128' overflowed by <n> bytes}
+These errors means that the firmware configuration being compiled is too big to fit the designed 56kB memory space (see Table \ref{tbl:lpc-memory-map} for more information about the LPC Memory Map).
+
+There's two options here: compile the firwmare with an option that uses lower resources, i.e. setting the \texttt{-DCMAKE\_BUILD\_TYPE} flag to \texttt{Release}, or select fewer modules on the current build by removing them in the file \texttt{openMMC/port/board/<board\_name>/CMakeLists.txt} (removing the \texttt{UART\_DEBUG} is a good choice if it's not extremely necessary, since printf is a memory-heavy function).
+
+\subsection{Programming}
+
+\subsubsection{LPC1764 Memory Layout}
+In order to correctly program it the AFC MMC Controller, its memory map must be presented and understood.
+
+The LPC1764 has 128kB of on-chip non-volatile memory divided in sectors of 4kB (0 to 15) and 32kB (16 and 17). It was divided to fit a simple bootloader (2kB), an active copy of the firmware (56kB) and spare space for an upgrade image (64kB), as shown in Table \ref{tbl:lpc-memory-map}. Since it has to prepare and erase a whole sector when writing to flash, the upgrade area ended up being larger than the active copy, given that the last 2 sectors are larger (32kB each) than the first ones (4kB each).
+
+\begin{table}[ht]
+  \begin{center}
+    \caption{LPC1764 Memory Map}
+    \label{tbl:lpc-memory-map}
+    \begin{tabular}{|c|c|}
+      \hline
+      Bootloader & 0x0000 to 0x1FFF\\
+      \hline
+      Running Firmware & 0x2000 to 0xFFFF\\
+      \hline
+      Upgrade Image & 0x10000 to 0x1FFFF\\
+      \hline
+    \end{tabular}
+  \end{center}
+\end{table}
+
+\subsubsection{HPM}
+Currently, the only way to perform a remote upgrade of the openMMC firmware it by using the HPM.1 (Hardware Platform Management) upgrade protocol.
+
+This protocol defines how the binary image must be sent over IPMI. First it must be converted from binary to a HPM image and then sent in small pieces over several messages to the MMC.
+
+The software used to perform both this operations is the HPM-Downloader \cite{hpm-github}, developed by Julian Mendez (CERN), with a few modifications to meet the project needs. It simply opens an RMCP connection with the MCH and sends small binary chunks to the MMC via IPMI messages.
+
+In order to run a remote upgrade, first compile hpm-downloader:
+
+\begin{lstlisting}[language=bash]
+  cd hpm-downloader/
+  make
+\end{lstlisting}
+
+Then, run the created binary with the needed arguments (use the \texttt{-h} or \texttt{--help} flag to see the argument list help).
+
+\begin{lstlisting}[language=bash]
+  cd hpm-downloader/bin
+  ./hpm-downloader --ip <mch_ip> --slot <amc_slot> <mmc_binary>
+\end{lstlisting}
+
+A successful output will be similar to the one below:
+\begin{lstlisting}[language=bash]
+  [INFO] {main}                          Programming MMC slot 9
+  [INFO] {Action detected}               Upload firmware image
+  [INFO] {Upgrade action detected}       Upgrade for component 0
+  [INFO] {Upgrade action detected}       Upgrade to version 10.1
+  [INFO] {Upgrade action detected}       "CERN MMC" firmware
+  [INFO] {get_img_information}           HPM image check successful
+  [INFO] {GET_DEVICE_ID}                 Completion Code : 0x00
+  [INFO] {check_hpm_info}                version 1.1 will be replace by 0.1
+  [INFO] {check_hpm_info}                HPM image check successful
+  [INFO] {Upgrade in progress}           32364 / 32364
+  [INFO] {ACTIVATE_FIRMWARE_UPLOAD}      Sending activation command
+  [INFO] {Upgrade action}                Upgrade success
+\end{lstlisting}
+
+The AFC will automatically reboot after receiving a complete firmware and will boot the updated MMC version. Note that if changes were made to the sensor table or the FRU information, the MCH won't detect them without a full system reboot or removing and reinserting the board, since these informations are only read when the board is detected on the backplane.
+
+After a reboot, all MMC sensors start in a reset state and they trigger the \texttt{Lower-non-critical} threshold upon startup and go up asserting the upper ones (and deasserting the lower ones) until they reach its normal reading state.
+This behaviour may cause some abnormalities on the MCH, such as the fans going full-speed for a few seconds until the temperature sensors report nominal readings and deassert its thresholds.
+
+
+\subsubsection{LPCLink}
+A more reliable way to program the LPC1764 controller is by using the JTAG connector (Jxx) present on the AFC, this way, even if the remote upgrade goes wrong or the new firmware is corrupted, it is still possible to reprogram it.
+
+The LPCLink is a general development board that contains a CMSIS-DAP debugger (and programmer) and a target LPC1769 for tests. The programmer owned by LNLS was customized and had a flat cable attached to the board in order to create a connector that matched the JTAG pinout on the AFC (its layout was designed for AVR programmers like JTAG-ICE).
+The user must be careful with the cable polarity, following the scheme on the Figure below.
+
+%%Esquema do conector do LPCLink
+
+In order to use the LPCLink as a programmer, it is necessary that the LPCXpresso IDE is installed and registered. The programming tool is present on the Free unregistered version, but it limits the size of the firmware that can be downloaded to the target. The registration is simple but requires an active account on NXP web platform.
+
+%% Imagem tutorial de como ativar/instalar o LPCXpresso
+
+\newparagraph{Programming via terminal - manually}
+To program the target controller using LPCLink, first make sure the cable is connected and the AFC board is powered (LPCLink doesn't provide enough current to power all AFC 3.3V bus). Then execute the following command to boot the LPCLink and configure the programmer chip:
+
+\begin{lstlisting}[language=bash]
+  dfu-util -d 0x0471:0xDF55 -c 0 -t 2048 -R -D /usr/local/lpcxpresso/lpcxpresso/bin/LPCXpressoWIN.enc
+\end{lstlisting}
+
+This step should produce the following output:
+
+\begin{lstlisting}[language=bash]
+  Deducing device DFU version from functional descriptor length
+  Opening DFU capable USB device...
+  ID 0471:df55
+  Run-time device DFU version 0100
+  Claiming USB DFU Runtime Interface...
+  Determining device status: state = dfuIDLE, status = 0
+  dfu-util: WARNING: Runtime device already in DFU state ?!?
+  Claiming USB DFU Interface...
+  Setting Alternate Setting #0 ...
+  Determining device status: state = dfuIDLE, status = 0
+  dfuIDLE, continuing
+  DFU mode device DFU version 0100
+  Copying data from PC to DFU device
+  Download      [=========================] 100%        29192 bytes
+  Download done.
+  state(8) = dfuMANIFEST-WAIT-RESET, status(0) = No error condition is present
+  Done!
+  dfu-util: can't detach
+  Resetting USB to switch back to runtime mode
+\end{lstlisting}
+
+Note that this command only needs to be executed once after the debug probe is connected to the PC USB port. It will fail if run again.
+
+After booted, run the following commands to program a binary image to the MMC:
+
+\begin{lstlisting}[language=bash]
+  /usr/local/lpcxpresso/lpcxpresso/bin/crt_emu_cm3_nxp -pLPC1768 -g -wire=winusb -load-base=0 -flash-load-exec=bootloader.bin
+  /usr/local/lpcxpresso/lpcxpresso/bin/crt_emu_cm3_nxp -pLPC1768 -g -wire=winusb -load-base=0x2000 -flash-load-exec=openMMC.bin
+\end{lstlisting}
+
+Which produces the output:
+
+\begin{lstlisting}[language=bash]
+  Placeholder for programming output
+\end{lstlisting}
+
+The images used in the previous commands are the compilation output from openMMC. The \texttt{load-base} values must be the ones showed, or the bootloader will fail and the firmware won't boot properly.
+
+\newparagraph{Programming via terminal - automatized}
+All the steps showed in the last section are already included as targets in the CMake build system, so it should be easier to execute them in one step. The following command will boot the LPCLink probe, erase the flash and program both bootlader and openMMC images to the MMC.
+
+\begin{lstlisting}[language=bash]
+  cmake ../ -DBOARD=afc-bpm -DVERSION=3.1 -DDEBUG_PROBE=LPCLink
+  make program_all
+\end{lstlisting}
+
+Note that in some computers, the DFU proccess may take some time to complete, which will make the programming fail at first. If this occurs, just run the last \texttt{make} command again and it should work.
+
+If the user wants to update only the bootloader or the openMMC firmware itself, one can run:
+
+\begin{lstlisting}[language=bash]
+  make program_boot
+  make program_app
+\end{lstlisting}
+
+
+\newparagraph{Programming via LPCXpresso}
+%% Imagem tutorial de como programar com LPCXpresso
+
+
+\subsubsection{LPCLink2}
+The LPCLink2 is an upgrade of its previous version and presents a more flexible board with support to various LPC modern controllers. Its use is similar to LPCLink, with a few changes regarding the executable that is needed in order to configure it.
+
+The LPCLink is a general development board that contains a CMSIS-DAP debugger (and programmer) and a target LPC1769 for tests. The programmer owned by LNLS was customized and had a flat cable attached to the board in order to create a connector that matched the JTAG pinout on the AFC (its layout was designed for AVR programmers like JTAG-ICE).
+The user must be careful with the cable polarity, following the scheme on the Figure below.
+
+%%Esquema do conector do LPCLink
+
+In order to use the LPCLink as a programmer, it is necessary that the LPCXpresso IDE is installed and registered, even if the programming is not going to be made by the IDE. The programming tool is present on the Free unregistered version, but it limits the size of the firmware that can be downloaded to the target. The registration is simple but requires an active account on NXP web platform.
+
+%% Imagem tutorial de como ativar/instalar o LPCXpresso
+
+\newparagraph{Programming via terminal - manually}
+To program the target controller using LPCLink, first make sure the cable is connected and the AFC board is powered (LPCLink doesn't provide enough current to power all AFC 3.3V bus). Then execute the following command to boot the LPCLink and configure the programmer chip:
+
+\begin{lstlisting}[language=bash]
+  dfu-util -d 0x1FC9:0x000C -c 0 -t 2048 -R -D /usr/local/lpcxpresso/lpcxpresso/bin/LPC432x_CMSIS_DAP_V5_173.bin.hdr
+\end{lstlisting}
+
+This step should produce the following output:
+
+\begin{lstlisting}[language=bash]
+  Placeholder for LPCLink2 DFU output
+\end{lstlisting}
+
+Note that this command only needs to be executed once after the debug probe is connected to the PC USB port. It will fail if run again.
+
+After booted, run the following commands to program a binary image to the MMC:
+
+\begin{lstlisting}[language=bash]
+  /usr/local/lpcxpresso/lpcxpresso/bin/crt_emu_cm_redlink -pLPC1764 -g -load-base=0 -flash-load-exec=bootloader.bin
+  /usr/local/lpcxpresso/lpcxpresso/bin/crt_emu_cm_redlink -pLPC1764 -g -load-base=0x2000 -flash-load-exec=openMMC.bin
+\end{lstlisting}
+
+Which produces the output:
+
+\begin{lstlisting}[language=bash]
+  Placeholder for programming output
+\end{lstlisting}
+
+The images used in the previous commands are the compilation output from openMMC. The \texttt{load-base} values must be the ones showed, or the bootloader will fail and the firmware won't boot properly.
+
+\newparagraph{Programming via terminal - automatized}
+All the steps showed in the last section are already included as targets in the CMake build system, so it should be easier to execute them in one step. The following command will boot the LPCLink probe, erase the flash and program both bootlader and openMMC images to the MMC.
+
+\begin{lstlisting}[language=bash]
+  cmake ../ -DBOARD=afc-bpm -DVERSION=3.1 -DDEBUG_PROBE=LPCLink2
+  make program_all
+\end{lstlisting}
+
+Note that in some computers, the DFU proccess may take some time to complete, which will make the programming fail at first. If this occurs, just run the last \texttt{make} command again and it should work.
+
+If the user wants to update only the bootloader or the openMMC firmware itself, one can run:
+
+\begin{lstlisting}[language=bash]
+  make program_boot
+  make program_app
+\end{lstlisting}
+
+
+\newparagraph{Programming via LPCXpresso}
+%% Imagem tutorial de como programar com LPCXpresso
+
+
+\subsubsection{OpenOCD}
+OpenOCD (Open On-Chip Debugger) is an open-source option to perform chip debugging and programming. It supports a wide variety of programmers and target controllers.
+
+So far, no tests were performed in order to use it as a replacement to LPCLink or ISP, but it should work with Buspirate acting as a CMSIS-DAP debugger as shown in this link \cite{buspirate-debug}.
+
+\subsection{Debugging}
+
+\subsubsection{Printf}
+A simple and effective way to debug the openMMC firmware is by printing information via the serial console. One just have to include the module \texttt{UART\_DEBUG} and add as many printf's as needed inside the code. The formatting of the printf implemented follows the C-standard, so it should be simple to use.
+
+Note that this function is not thread-safe yet, so if more than one thread is trying to use \texttt{printf}, the information may be printed out of order. There's an open issue (\#90) discussing this problem at the project github repository, you can track its progress there.
+
+In order to receive the information from the UART port, just connect a microUSB cable on the MMC-UART connector (the one closest to the center of the AFC board, next to the middle button) and open a serial terminal, for example minicom, with 19200 as baud rate and 8N1 configuration:
+
+\begin{lstlisting}[language=bash]
+  sudo minicom -D /dev/ttyACM0 -b 19200
+\end{lstlisting}
+
+\subsubsection{LPCXpresso}
+
+\newpage
+\begin{thebibliography}{99}
+
+\bibitem{openmmc-github} \emph{openMMC} GitHub repository. \url{https://github.com/lnls-dig/openMMC}.
+
+\bibitem{hpm-github} \emph{hpm-downloader} GitHub repository. \url{https://github.com/lnls-dig/hpm-downloader}.
+
+\bibitem{buspirate-debug} JTAG debugging with a Bus Pirate, OpenOCD, and LPC1768. \url{http://bgamari.github.io/posts/2012-03-28-jtag-over-buspirate.html}.
+
+\end{thebibliography}
+
+\end{document}
