@@ -113,24 +113,6 @@ After a successful run, \texttt{make} will generate the binaries in the folder \
 \item\texttt{bootloader.bin}: Simple bootloader binary
 \end{itemize}
 
-\subsubsection{Common Compilation Errors}
-
-\newparagraph{CMake: The source directory "dir" does not appear to contain CMakeLists.txt}
-This error occurs when CMake can't find the CMakeLists.txt base file (located on openMMC root dir). Check the path given on the CMake command as argument and try again
-
-\newparagraph{CMake: In Source Build}
-If CMake is run on the root directory of the project, it will throw an error and display a message indicating that this is forbidden. Since CMake creates some base files and folders when run, it will complain about it the next time it's run (even if in a different folder).
-
-To solve this, just erase the \texttt{CMakeCache.txt} file and \texttt{CMakeFiles} folder from the project root directory. Alternatively, run \texttt{git clean -fdX} if this is a clean copy of the repository (note that this command will erase any files that don't match the ones present in the remote repository).
-
-\newparagraph{CMake: Selected [RTM] board <name> is not implemented!}
-As the error message says, the given board name on the CMake command does not match any port folder found at \texttt{openMMC/port/board}. Check the command and try again.
-
-\newparagraph{make: out/openMMC.axf section `.text' will not fit in region `MFlash128' \\ make: region `MFlash128' overflowed by <n> bytes}
-These errors means that the firmware configuration being compiled is too big to fit the designed 56kB memory space (see Table \ref{tbl:lpc-memory-map} for more information about the LPC Memory Map).
-
-There's two options here: compile the firwmare with an option that uses lower resources, i.e. setting the \texttt{-DCMAKE\_BUILD\_TYPE} flag to \texttt{Release}, or select fewer modules on the current build by removing them in the file \texttt{openMMC/port/board/<board\_name>/CMakeLists.txt} (removing the \texttt{UART\_DEBUG} is a good choice if it's not extremely necessary, since printf is a memory-heavy function).
-
 \subsection{Programming}
 
 \subsubsection{LPC1764 Memory Layout}
@@ -206,8 +188,6 @@ The user must be careful with the cable polarity, following the scheme on the Fi
 %%Esquema do conector do LPCLink
 
 In order to use the LPCLink as a programmer, it is necessary that the LPCXpresso IDE is installed and registered. The programming tool is present on the Free unregistered version, but it limits the size of the firmware that can be downloaded to the target. The registration is simple but requires an active account on NXP web platform.
-
-%% Imagem tutorial de como ativar/instalar o LPCXpresso
 
 \newparagraph{Programming via terminal - manually}
 To program the target controller using LPCLink, first make sure the cable is connected and the AFC board is powered (LPCLink doesn't provide enough current to power all AFC 3.3V bus). Then execute the following command to boot the LPCLink and configure the programmer chip:
@@ -383,7 +363,50 @@ In order to receive the information from the UART port, just connect a microUSB 
 
 \subsubsection{LPCXpresso}
 
+\section{Common Problems}
+
+\subsection{Compilation}
+
+\newparagraph{CMake: The source directory "dir" does not appear to contain CMakeLists.txt}
+This error occurs when CMake can't find the CMakeLists.txt base file (located on openMMC root dir). Check the path given on the CMake command as argument and try again
+
+\newparagraph{CMake: In Source Build}
+If CMake is run on the root directory of the project, it will throw an error and display a message indicating that this is forbidden. Since CMake creates some base files and folders when run, it will complain about it the next time it's run (even if in a different folder).
+
+To solve this, just erase the \texttt{CMakeCache.txt} file and \texttt{CMakeFiles} folder from the project root directory. Alternatively, run \texttt{git clean -fdX} if this is a clean copy of the repository (note that this command will erase any files that don't match the ones present in the remote repository).
+
+\newparagraph{CMake: Selected [RTM] board <name> is not implemented!}
+As the error message says, the given board name on the CMake command does not match any port folder found at \texttt{openMMC/port/board}. Check the command and try again.
+
+\newparagraph{make: out/openMMC.axf section `.text' will not fit in region `MFlash128' \\ make: region `MFlash128' overflowed by <n> bytes}
+These errors means that the firmware configuration being compiled is too big to fit the designed 56kB memory space (see Table \ref{tbl:lpc-memory-map} for more information about the LPC Memory Map).
+
+There's two options here: compile the firwmare with an option that uses lower resources, i.e. setting the \texttt{-DCMAKE\_BUILD\_TYPE} flag to \texttt{Release}, or select fewer modules on the current build by removing them in the file \texttt{openMMC/port/board/<board\_name>/CMakeLists.txt} (removing the \texttt{UART\_DEBUG} is a good choice if it's not extremely necessary, since printf is a memory-heavy function).
+
+\subsection{Programming}
+
+\newparagraph{LPCLink*: No matching emulator found}
+The LPCLink programmer is not configured properly, or not connected at all to the host PC.
+
+\newparagraph{LPCLink*: Target marked as not debuggable}
+The AFC board is probably not powered or the connection between LPCLink* and the board is broken.
+
+\newparagraph{Front panel LEDs blinking when programming}
+If all LEDs on the AFC's front panel blink together with the programmer's LED, there's probably a problem with the clock/data wire from LPCLink to AFC. This happens because the programmer tries to reset the LPC controller multiples times in order to get it in a working state.
+
+Another reason that may trigger this state is a faulty clock configuration. In this case, it is necessary to turn-off the board, tie the \texttt{Boot} pin on connector \texttt{LPC PROG - JP2, pin 8} to ground and then turn the board on again. This puts the controller in a known state, making it possible to reprogram it.
+
+\subsection{General}
+
+\newparagraph{Green LED is not blinking}
+The green LED is a heartbeat signal and should blink at aprox. 1Hz. If this is not happening, most likely there is a problem with the firmware itself. Try to revert it to the last known working version and see if the problem persists.
+
+If the problem occurs in other stable versions, then the problem can be that the \texttt{ENABLE} signal is not being asserted (grounded) by the backplane. This signal originally should be tied to the controller's RESET line, but since this signal is connected to a GPIO instead, openMMC performs a ``software-lock'', only enabling the firmware to boot after this signal is asserted. Try to compile the firmware with the \texttt{BENCH\_TEST} flag, which bypasses this lock, and see if the problem is resolved.
+
+If after all the above tests the firmware still is unresponsive, then there's a problem with this release code itself, which probably is a stack overflow or ``endless loop'' locking the firmware.
+
 \newpage
+\begin{appendices}
 \begin{thebibliography}{99}
 
 \bibitem{openmmc-github} \emph{openMMC} GitHub repository. \url{https://github.com/lnls-dig/openMMC}.
