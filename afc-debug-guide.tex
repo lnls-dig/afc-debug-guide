@@ -185,7 +185,7 @@ This behaviour may cause some abnormalities on the MCH, such as the fans going f
 
 
 \subsubsection{LPCLink}
-A more reliable way to program the LPC1764 controller is by using the JTAG connector (Jxx) present on the AFC, this way, even if the remote upgrade goes wrong or the new firmware is corrupted, it is still possible to reprogram it.
+A more reliable way to program the LPC1764 controller is by using the JTAG connector (JP1) present on the AFC, this way, even if the remote upgrade goes wrong or the new firmware is corrupted, it is still possible to reprogram it.
 
 The LPCLink is a general development board that contains a CMSIS-DAP debugger (and programmer) and a target LPC1769 for tests. The programmer owned by LNLS was customized and had a flat cable attached to the board in order to create a connector that matched the JTAG pinout on the AFC (its layout was designed for AVR programmers like JTAG-ICE).
 The user must be careful with the cable polarity, following the scheme on the Figure below.
