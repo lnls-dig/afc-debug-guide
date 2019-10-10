@@ -332,7 +332,7 @@ Wireshark can then be used to filter and analyze the forwarded messages. In orde
   \end{itemize}
 \end{enumerate}
 
-The user can also filter the messages according to the needed information. One of the best ways to do so is using a source/destination IPMI filter, which is based on the module's I2C address (see Appendix A for the FRU listing). For example, in order to see only IPMI messages between the MCH and all the AMCs, one can use the following filter:
+The user can also filter the messages according to the needed information. One of the best ways to do so is using a source/destination IPMI filter, which is based on the module's I2C address. For example, in order to see only IPMI messages between the MCH and all the AMCs, one can use the following filter:
 
 \begin{lstlisting}
   ((ipmi.header.target >= 0x70) and (ipmi.header.target < 0x90)) or ((ipmi.header.source >= 0x70) and (ipmi.header.source< 0x90))
@@ -395,7 +395,6 @@ If the problem occurs in other stable versions, then the problem can be that the
 If after all the above tests the firmware still is unresponsive, then there's a problem with this release code itself, which probably is a stack overflow or ``endless loop'' locking the firmware.
 
 \newpage
-\begin{appendices}
 \begin{thebibliography}{99}
 
 \bibitem{openmmc-github} \emph{openMMC} GitHub repository. \url{https://github.com/lnls-dig/openMMC}.
