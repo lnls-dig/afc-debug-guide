@@ -144,7 +144,7 @@ The LPC1764 has 128kB of on-chip non-volatile memory divided in sectors of 4kB (
 \subsubsection{HPM}
 Currently, the only way to perform a remote upgrade of the openMMC firmware it by using the HPM.1 (Hardware Platform Management) upgrade protocol.
 
-This protocol defines how the binary image must be sent over IPMI. First it must be converted from binary to a HPM image and then sent in small pieces over several messages to the MMC.
+This protocol defines how the binary image must be sent over IPMI. First it must be converted from binary to a HPM image and then sent in small pieces over several IPMI messages to the MMC.
 
 The software used to perform both this operations is the HPM-Downloader \cite{hpm-github}, developed by Julian Mendez (CERN), with a few modifications to meet the project needs. It simply opens an RMCP connection with the MCH and sends small binary chunks to the MMC via IPMI messages.
 
