@@ -50,10 +50,15 @@
 
 \section{Known hardware problems}
 
-\section{MMC Programming Guide}
+\section{MMC - Module Management Controller}
+
+The MMC is the controller responsible to monitor the board health and communicate its status to the MCH using the IPMI protocol. It also controls the LEDs present on the board (with the exception of the RGB one, which is directly controlled by the FPGA) and all of the payload's DCDC converters.
+The firmware used on AFC controller is the openMMC \cite{openmmc-github}, a open-source modular firmware, based on FreeRTOS, developed by LNLS.
+
+In both AFC variants (BPM and Timing in time of writing), the controller is NXP's LPC1764, which can be programmed either localy, using a JTAG-compatible programmer or remotely via HPM. Both these options are explained in sections below.
 
 \subsection{Compiling openMMC}
-openMMC \cite{openmmc-github} uses the CMake build system to ease the compilation of its modules and perform the cross-compiling for multiple hardware targets.
+openMMC uses the CMake build system to ease the compilation of its modules and perform the cross-compiling for multiple hardware targets.
 The compilation \textbf{MUST} be performed out-of-source, that is, in a separate folder from the source code.
 
 There are a few flags that can be passed to CMake in order to customize the build, shown in Table \ref{tbl:cmake-flags}. The only mandatory flag is \texttt{-DBOARD}, the others are optional (depending on the port some may become mandatory, for example, if the board has more than one version then the flag \texttt{-DVERSION} must be specified).
