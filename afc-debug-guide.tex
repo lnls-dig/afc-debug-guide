@@ -350,6 +350,26 @@ So far, no tests were performed in order to use it as a replacement to LPCLink o
 
 \subsection{Debugging}
 
+\subsubsection{IPMI}
+The NAT MCH monitors all IPMI messages being sent in the MTCA system and can forward them over ethernet to an specific external PC on the network via UDP. This option must be enabled in the MCH's Web interface, on \texttt{Base Configuration} menu.
+
+Wireshark can then be used to filter and analyze the forwarded messages. In order to decode the IPMI messages from the UDP packet, the user has to perform the following steps:
+
+\begin{enumerate}
+\item Under \texttt{Analyze} drop-down menu, click on \texttt{Decode As...}
+\item Click on the \texttt{+} button and fill the new line as follows:
+  \begin{itemize}
+  \item \texttt{Field = UDP Port}, \texttt{Value = $<$port selected on MCH config$>$}, \texttt{Type = Integer,base 10}, \texttt{Default = (none)}, \texttt{Current = RMCP}
+  \end{itemize}
+\end{enumerate}
+
+The user can also filter the messages according to the needed information. One of the best ways to do so is using a source/destination IPMI filter, which is based on the module's I2C address (see Appendix A for the FRU listing). For example, in order to see only IPMI messages between the MCH and all the AMCs, one can use the following filter:
+
+\begin{lstlisting}
+  ((ipmi.header.target >= 0x70) and (ipmi.header.target < 0x90)) or ((ipmi.header.source >= 0x70) and (ipmi.header.source< 0x90))
+\end{lstlisting}
+
+
 \subsubsection{Printf}
 A simple and effective way to debug the openMMC firmware is by printing information via the serial console. One just have to include the module \texttt{UART\_DEBUG} and add as many printf's as needed inside the code. The formatting of the printf implemented follows the C-standard, so it should be simple to use.
 
