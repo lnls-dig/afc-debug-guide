@@ -188,9 +188,7 @@ This behaviour may cause some abnormalities on the MCH, such as the fans going f
 A more reliable way to program the LPC1764 controller is by using the JTAG connector (JP1) present on the AFC, this way, even if the remote upgrade goes wrong or the new firmware is corrupted, it is still possible to reprogram it.
 
 The LPCLink is a general development board that contains a CMSIS-DAP debugger (and programmer) and a target LPC1769 for tests. The programmer owned by LNLS was customized and had a flat cable attached to the board in order to create a connector that matched the JTAG pinout on the AFC (its layout was designed for AVR programmers like JTAG-ICE).
-The user must be careful with the cable polarity, following the scheme on the Figure below.
-
-%%Esquema do conector do LPCLink
+The user must be careful with the cable polarity, following the pinout present on AFC's schematic \cite{afc-schema}
 
 In order to use the LPCLink as a programmer, it is necessary that the LPCXpresso IDE is installed and registered. The programming tool is present on the Free unregistered version, but it limits the size of the firmware that can be downloaded to the target. The registration is simple but requires an active account on NXP web platform.
 
@@ -259,22 +257,13 @@ If the user wants to update only the bootloader or the openMMC firmware itself, 
   make program_app
 \end{lstlisting}
 
-
-\newparagraph{Programming via LPCXpresso}
-%% Imagem tutorial de como programar com LPCXpresso
-
-
 \subsubsection{LPCLink2}
 The LPCLink2 is an upgrade of its previous version and presents a more flexible board with support to various LPC modern controllers. Its use is similar to LPCLink, with a few changes regarding the executable that is needed in order to configure it.
 
 The LPCLink is a general development board that contains a CMSIS-DAP debugger (and programmer) and a target LPC1769 for tests. The programmer owned by LNLS was customized and had a flat cable attached to the board in order to create a connector that matched the JTAG pinout on the AFC (its layout was designed for AVR programmers like JTAG-ICE).
-The user must be careful with the cable polarity, following the scheme on the Figure below.
-
-%%Esquema do conector do LPCLink
+The user must be careful with the cable polarity, following the pinout present in the AFC schematic \cite{afc-schema}.
 
 In order to use the LPCLink as a programmer, it is necessary that the LPCXpresso IDE is installed and registered, even if the programming is not going to be made by the IDE. The programming tool is present on the Free unregistered version, but it limits the size of the firmware that can be downloaded to the target. The registration is simple but requires an active account on NXP web platform.
-
-%% Imagem tutorial de como ativar/instalar o LPCXpresso
 
 \newparagraph{Programming via terminal - manually}
 To program the target controller using LPCLink, first make sure the cable is connected and the AFC board is powered (LPCLink doesn't provide enough current to power all AFC 3.3V bus). Then execute the following command to boot the LPCLink and configure the programmer chip:
@@ -322,11 +311,6 @@ If the user wants to update only the bootloader or the openMMC firmware itself, 
   make program_boot
   make program_app
 \end{lstlisting}
-
-
-\newparagraph{Programming via LPCXpresso}
-%% Imagem tutorial de como programar com LPCXpresso
-
 
 \subsubsection{OpenOCD}
 OpenOCD (Open On-Chip Debugger) is an open-source option to perform chip debugging and programming. It supports a wide variety of programmers and target controllers.
