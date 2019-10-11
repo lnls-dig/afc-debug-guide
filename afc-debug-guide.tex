@@ -389,6 +389,10 @@ If the problem occurs in other stable versions, then the problem can be that the
 
 If after all the above tests the firmware still is unresponsive, then there's a problem with this release code itself, which probably is a stack overflow or ``endless loop'' locking the firmware.
 
+\newparagraph{Board constantly resetting}
+This problem may have different origins. If the issue causing the constant reset is in the hardware (e.g. a short circuit in the Management Power lane), then the MCH will keep turning off the MMC as soon as it exceeds its current limit. In this case the user can check the MCH logs and check for any power failures that might be printed.
+If the issue is firmware-related, then the Watchdog module, if included in the compilation, will reset the MMC controller if there's any internal fault (e.g. invalid memory access, race-condition), but this is easier to distinguish since the watchdog timer overflow is about 3.5s. In this case the developer will have to debug the code in order to solve the problem.
+
 \newpage
 \begin{thebibliography}{99}
 
