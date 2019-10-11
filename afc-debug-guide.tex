@@ -46,6 +46,13 @@
 
 \section{Normal status and operation}
 
+Under normal conditions, when plugged in the crate, the AFC will light up its Blue LED, indicating the hotswap condition, and blink the Green LED at approximately 1Hz.
+
+After pressing the Hotswap handle, the MCH will start the payload power-up proccess and the blue LED will start to blink. After this proccess is complete and there are no errors, the blue LED will be turned-off and the Payload will be fully functional.
+
+It's important to note that power-up proccess (and consequently the PCIe link) may be delayed by a configurable amount in the MCH. Currently this delay is fixed in 30s in order to prevent some PCIe bugs.
+
+When the hotswap handle is released, the MCH will, again, set the blue LED to blinking mode and perform all the needed internal actions to safely shut down the board. When fully shutdown, the AFC will have its blue LED turned-on (no blinking) and may be safely removed from the crate.
 
 \section{MMC - Module Management Controller}
 
